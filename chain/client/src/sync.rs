@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::{ops::Add, time::Duration as TimeDuration};
 
 use ansi_term::Color::{Purple, Yellow};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration};
 use futures::{future, FutureExt};
 use log::{debug, error, info, warn};
 use rand::seq::{IteratorRandom, SliceRandom};
@@ -19,6 +19,7 @@ use near_primitives::block::Tip;
 use near_primitives::hash::CryptoHash;
 use near_primitives::network::PeerId;
 use near_primitives::syncing::get_num_state_parts;
+use near_primitives::time::{MockTime, Utc};
 use near_primitives::types::validator_stake::ValidatorStake;
 use near_primitives::types::{
     AccountId, BlockHeight, BlockHeightDelta, EpochId, ShardId, StateRoot,
@@ -119,7 +120,7 @@ impl EpochSync {
             next_epoch_id: genesis_next_epoch_id.clone(),
             next_block_producers: first_epoch_block_producers,
             requested_epoch_id: genesis_epoch_id,
-            last_request_time: Utc::now(),
+            last_request_time: Utc::now_or_mock(),
             last_request_peer_id: None,
             request_timeout: Duration::from_std(request_timeout).unwrap(),
             peer_timeout: Duration::from_std(peer_timeout).unwrap(),
@@ -158,7 +159,7 @@ impl HeaderSync {
         HeaderSync {
             network_adapter,
             history_locator: vec![],
-            prev_header_sync: (Utc::now(), 0, 0, 0),
+            prev_header_sync: (Utc::now_or_mock(), 0, 0, 0),
             syncing_peer: None,
             stalling_ts: None,
             initial_timeout: Duration::from_std(initial_timeout).unwrap(),
@@ -225,7 +226,7 @@ impl HeaderSync {
         header_head: &Tip,
         highest_height: BlockHeight,
     ) -> bool {
-        let now = Utc::now();
+        let now = Utc::now_or_mock();
         let (timeout, old_expected_height, prev_height, prev_highest_height) =
             self.prev_header_sync;
 
@@ -530,7 +531,8 @@ impl BlockSync {
         };
         let next_height = chain.get_block_header(&next_hash)?.height();
 
-        let request = BlockSyncRequest { height: next_height, hash: next_hash, when: Utc::now() };
+        let request =
+            BlockSyncRequest { height: next_height, hash: next_hash, when: Utc::now_or_mock() };
 
         let head = chain.head()?;
         let header_head = chain.header_head()?;
@@ -566,7 +568,7 @@ impl BlockSync {
             None => Ok(true),
             Some(request) => Ok(chain.head()?.height >= request.height
                 || chain.is_chunk_orphan(&request.hash)
-                || Utc::now() - request.when > Duration::seconds(BLOCK_REQUEST_TIMEOUT)),
+                || Utc::now_or_mock() - request.when > Duration::seconds(BLOCK_REQUEST_TIMEOUT)),
         }
     }
 }
@@ -588,10 +590,10 @@ struct PendingRequestStatus {
 
 impl PendingRequestStatus {
     fn new(timeout: Duration) -> Self {
-        Self { missing_parts: 1, wait_until: Utc::now().add(timeout) }
+        Self { missing_parts: 1, wait_until: Utc::now_or_mock().add(timeout) }
     }
     fn expired(&self) -> bool {
-        Utc::now() > self.wait_until
+        Utc::now_or_mock() > self.wait_until
     }
 }
 
@@ -1155,7 +1157,7 @@ impl StateSync {
         state_split_scheduler: &dyn Fn(StateSplitRequest),
     ) -> Result<StateSyncResult, near_chain::Error> {
         let prev_hash = chain.get_block_header(&sync_hash)?.prev_hash().clone();
-        let now = Utc::now();
+        let now = Utc::now_or_mock();
 
         let (request_block, have_block) = self.sync_block_status(&prev_hash, chain, now)?;
 

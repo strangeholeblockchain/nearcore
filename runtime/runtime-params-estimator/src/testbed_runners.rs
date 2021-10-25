@@ -4,6 +4,7 @@ use crate::testbed::RuntimeTestbed;
 use indicatif::{ProgressBar, ProgressStyle};
 use near_crypto::{InMemorySigner, KeyType};
 use near_primitives::hash::CryptoHash;
+use near_primitives::time::Instant;
 use near_primitives::transaction::{Action, SignedTransaction};
 use near_primitives::types::AccountId;
 use near_vm_runner::VMKind;
@@ -12,7 +13,6 @@ use std::collections::{HashMap, HashSet};
 use std::os::raw::c_void;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 
 /// Get account id from its index.
 pub fn get_account_id(account_index: usize) -> AccountId {

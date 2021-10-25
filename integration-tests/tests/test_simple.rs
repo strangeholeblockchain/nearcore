@@ -21,7 +21,7 @@ mod test {
         }
 
         // waiting for nodes to be synced
-        let started = Instant::now();
+        let started = Instant::now_or_mock();
         loop {
             if started.elapsed() > Duration::from_secs(10) {
                 panic!("nodes are not synced in 10s");

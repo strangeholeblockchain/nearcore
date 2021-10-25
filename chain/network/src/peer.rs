@@ -1,3 +1,4 @@
+use near_primitives::time::MockTime;
 use std::cmp::max;
 use std::io;
 use std::net::SocketAddr;
@@ -236,11 +237,11 @@ impl Peer {
             genesis_id: Default::default(),
             chain_info: Default::default(),
             edge_info,
-            last_time_received_message_update: Instant::now(),
+            last_time_received_message_update: Instant::now_or_mock(),
             network_metrics,
             txns_since_last_block,
             peer_counter,
-            last_time_received_epoch_sync_request: Instant::now()
+            last_time_received_epoch_sync_request: Instant::now_or_mock()
                 - Duration::from_millis(EPOCH_SYNC_PEER_TIMEOUT_MS),
             routed_message_cache: SizedCache::with_size(ROUTED_MESSAGE_CACHE_SIZE),
         }
@@ -411,7 +412,7 @@ impl Peer {
                 NetworkViewClientMessages::BlockHeadersRequest(hashes)
             }
             PeerMessage::EpochSyncRequest(epoch_id) => {
-                self.last_time_received_epoch_sync_request = Instant::now();
+                self.last_time_received_epoch_sync_request = Instant::now_or_mock();
                 NetworkViewClientMessages::EpochSyncRequest { epoch_id }
             }
             PeerMessage::EpochSyncFinalizationRequest(epoch_id) => {
@@ -620,7 +621,7 @@ impl Peer {
             if self.last_time_received_message_update.elapsed()
                 > UPDATE_INTERVAL_LAST_TIME_RECEIVED_MESSAGE
             {
-                self.last_time_received_message_update = Instant::now();
+                self.last_time_received_message_update = Instant::now_or_mock();
                 self.peer_manager_addr.do_send(PeerRequest::ReceivedMessage(
                     peer_id,
                     self.last_time_received_message_update,
@@ -740,7 +741,7 @@ impl StreamHandler<Result<Vec<u8>, ReasonForBan>> for Peer {
         // Drop duplicated messages routed within DROP_DUPLICATED_MESSAGES_PERIOD ms
         if let PeerMessage::Routed(msg) = &peer_msg {
             let key = (msg.author.clone(), msg.target.clone(), msg.signature.clone());
-            let now = Instant::now();
+            let now = Instant::now_or_mock();
             if let Some(time) = self.routed_message_cache.cache_get(&key) {
                 if now.duration_since(*time) <= DROP_DUPLICATED_MESSAGES_PERIOD {
                     debug!(target: "network", "Dropping duplicated message from {} to {:?}", msg.author, msg.target);

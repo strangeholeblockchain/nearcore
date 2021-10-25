@@ -3,6 +3,7 @@
 use anyhow::Context;
 use clap::Clap;
 use genesis_populate::GenesisBuilder;
+use near_primitives::time::{MockTime, Utc};
 use near_primitives::version::PROTOCOL_VERSION;
 use near_store::create_store;
 use near_vm_runner::VMKind;
@@ -188,7 +189,7 @@ fn main() -> anyhow::Result<()> {
     );
 
     let output_path = {
-        let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let timestamp = Utc::now_or_mock().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         let commit =
             exec("git rev-parse --short HEAD").map(|hash| format!("-{}", hash)).unwrap_or_default();
         let file_name = format!("costs-{}{}.txt", timestamp, commit);

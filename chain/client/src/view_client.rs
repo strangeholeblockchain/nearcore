@@ -1,6 +1,7 @@
 //! Readonly view of the chain and state of the database.
 //! Useful for querying from RPC.
 
+use near_primitives::time::MockTime;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -161,7 +162,7 @@ impl ViewClientActor {
     }
 
     fn need_request<K: Hash + Eq + Clone>(key: K, cache: &mut SizedCache<K, Instant>) -> bool {
-        let now = Instant::now();
+        let now = Instant::now_or_mock();
         let need_request = match cache.cache_get(&key) {
             Some(time) => now - *time > Duration::from_millis(REQUEST_WAIT_TIME),
             None => true,
@@ -511,7 +512,7 @@ impl ViewClientActor {
 
     fn check_state_sync_request(&self) -> bool {
         let mut cache = self.state_request_cache.lock().expect(POISONED_LOCK_ERR);
-        let now = Instant::now();
+        let now = Instant::now_or_mock();
         let cutoff = now - self.config.view_client_throttle_period;
         // Assume that time is linear. While in different threads there might be some small differences,
         // it should not matter in practice.

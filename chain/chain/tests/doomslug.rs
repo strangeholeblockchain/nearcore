@@ -1,11 +1,11 @@
 #[cfg(test)]
 #[cfg(feature = "expensive_tests")]
 mod tests {
+    use near_primitives::time::MockTime;
+    use rand::{thread_rng, Rng};
     use std::collections::{HashMap, HashSet};
     use std::sync::Arc;
     use std::time::{Duration, Instant};
-
-    use rand::{thread_rng, Rng};
 
     use near_chain::{Doomslug, DoomslugThresholdMode};
     use near_crypto::{KeyType, SecretKey};
@@ -75,7 +75,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let mut now = Instant::now();
+        let mut now = Instant::now_or_mock();
         let started = now;
 
         let gst = now + time_to_gst;

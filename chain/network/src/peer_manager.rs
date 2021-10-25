@@ -13,7 +13,6 @@ use actix::{
     Actor, ActorFuture, Addr, Arbiter, AsyncContext, Context, ContextFutureSpawner, Handler,
     Recipient, Running, StreamHandler, SyncArbiter, WrapFuture,
 };
-use chrono::Utc;
 use futures::task::Poll;
 use futures::{future, Stream, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -28,6 +27,7 @@ use near_performance_metrics_macros::perf;
 use near_primitives::checked_feature;
 use near_primitives::hash::CryptoHash;
 use near_primitives::network::{AnnounceAccount, PeerId};
+use near_primitives::time::{MockTime, Utc};
 use near_primitives::types::{AccountId, ProtocolVersion};
 use near_primitives::utils::from_timestamp;
 use near_store::Store;
@@ -258,7 +258,7 @@ impl PeerManagerActor {
     fn broadcast_edges(&mut self, ctx: &mut Context<PeerManagerActor>) {
         let me = self.peer_id.clone();
 
-        let start = Instant::now();
+        let start = Instant::now_or_mock();
         let mut new_edges = Vec::new();
         while let Some(edge) = self.routing_table_exchange_helper.edges_to_add_receiver.pop() {
             if let Some(cur_edge) =
@@ -418,9 +418,9 @@ impl PeerManagerActor {
                 full_peer_info,
                 sent_bytes_per_sec: 0,
                 received_bytes_per_sec: 0,
-                last_time_peer_requested: Instant::now(),
-                last_time_received_message: Instant::now(),
-                connection_established_time: Instant::now(),
+                last_time_peer_requested: Instant::now_or_mock(),
+                last_time_received_message: Instant::now_or_mock(),
+                connection_established_time: Instant::now_or_mock(),
                 peer_type,
             },
         );
@@ -485,7 +485,7 @@ impl PeerManagerActor {
             // Ask for peers list on connection.
             let _ = addr.do_send(SendMessage { message: PeerMessage::PeersRequest });
             if let Some(active_peer) = act.active_peers.get_mut(&target_peer_id) {
-                active_peer.last_time_peer_requested = Instant::now();
+                active_peer.last_time_peer_requested = Instant::now_or_mock();
             }
 
             if peer_type == PeerType::Outbound {
@@ -754,7 +754,7 @@ impl PeerManagerActor {
         let msg = SendMessage { message: PeerMessage::PeersRequest };
         for (_, active_peer) in self.active_peers.iter_mut() {
             if active_peer.last_time_peer_requested.elapsed() > REQUEST_PEERS_SECS {
-                active_peer.last_time_peer_requested = Instant::now();
+                active_peer.last_time_peer_requested = Instant::now_or_mock();
                 requests.push(active_peer.addr.send(msg.clone()));
             }
         }
@@ -1027,7 +1027,7 @@ impl PeerManagerActor {
         for (peer_id, peer_state) in self.peer_store.iter() {
             if let KnownPeerStatus::Banned(_, last_banned) = peer_state.status {
                 let interval = unwrap_or_error!(
-                    (Utc::now() - from_timestamp(last_banned)).to_std(),
+                    (Utc::now_or_mock() - from_timestamp(last_banned)).to_std(),
                     "Failed to convert time"
                 );
                 if interval > self.config.ban_window {

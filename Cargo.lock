@@ -323,6 +323,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "577b08a4acd7b99869f863c50011b01eb73424ccc798ecd996f2e24817adfca7"
 
 [[package]]
+name = "arc-swap"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6df5aef5c5830360ce5218cecb8f018af3438af5686ae945094affc86fdec63"
+
+[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2835,6 +2841,7 @@ dependencies = [
 name = "near-primitives"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "base64 0.13.0",
  "bencher",
  "borsh 0.9.1",
@@ -2850,6 +2857,7 @@ dependencies = [
  "near-rpc-error-macro",
  "near-vm-errors",
  "num-rational",
+ "once_cell",
  "primitive-types",
  "rand 0.7.3",
  "reed-solomon-erasure",

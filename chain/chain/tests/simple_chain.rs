@@ -1,21 +1,57 @@
+use chrono;
+use chrono::TimeZone;
 use near_chain::test_utils::setup;
 use near_chain::{Block, ChainStoreAccess, ErrorKind, Provenance};
 use near_logger_utils::init_test_logger;
 use near_primitives::hash::CryptoHash;
+use near_primitives::time::MockTimeSingleton;
 use near_primitives::version::PROTOCOL_VERSION;
 use num_rational::Rational;
+use std::str::FromStr;
 
 #[test]
 fn empty_chain() {
     init_test_logger();
+    let mock_time = MockTimeSingleton::get();
+    mock_time.lock().unwrap().reset();
+    let now = chrono::Utc.ymd(2020, 10, 1).and_hms_milli(0, 0, 1, 444);
+    mock_time.lock().unwrap().add_utc(now);
+
     let (chain, _, _) = setup();
+    let count_instant = { mock_time.lock().unwrap().get_instant_call_count() };
+    let count_utc = { mock_time.lock().unwrap().get_utc_call_count() };
+
     assert_eq!(chain.head().unwrap().height, 0);
+    assert_eq!(
+        chain.head().unwrap().last_block_hash,
+        CryptoHash::from_str("ED2pukQzADa3rPKzmSkVV4vA3J6DLASBsU9WRbesKywZ").unwrap()
+    );
+    assert_eq!(count_utc, 1);
+    assert_eq!(count_instant, 0);
 }
 
 #[test]
 fn build_chain() {
     init_test_logger();
+    let mock_time = MockTimeSingleton::get();
+    mock_time.lock().unwrap().reset();
+    for i in 0..5 {
+        mock_time.lock().unwrap().add_utc(chrono::Utc.ymd(2020, 10, 1).and_hms_milli(
+            0,
+            0,
+            3,
+            444 + i,
+        ));
+    }
+
     let (mut chain, _, signer) = setup();
+
+    let prev_hash = *chain.head_header().unwrap().hash();
+    assert_eq!(
+        prev_hash,
+        CryptoHash::from_str("Ax1E4j9Yq7AVECEtXrhjEvnMe6XGG1FXYg8jhAZrZrmK").unwrap()
+    );
+
     for i in 0..4 {
         let prev_hash = *chain.head_header().unwrap().hash();
         let prev = chain.get_block(&prev_hash).unwrap();
@@ -26,6 +62,14 @@ fn build_chain() {
         assert_eq!(tip.unwrap().height, i + 1);
     }
     assert_eq!(chain.head().unwrap().height, 4);
+    let count_instant = { mock_time.lock().unwrap().get_instant_call_count() };
+    let count_utc = { mock_time.lock().unwrap().get_utc_call_count() };
+    assert_eq!(count_utc, 5);
+    assert_eq!(count_instant, 0);
+    assert_eq!(
+        chain.head().unwrap().last_block_hash,
+        CryptoHash::from_str("8qbYy7tVXGVFBaqoxbVbeQFBJpQBs9iPRCqHdsz6c3Ws").unwrap()
+    );
 }
 
 #[test]
