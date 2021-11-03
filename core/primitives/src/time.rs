@@ -1,23 +1,22 @@
 use std::default::Default;
 use std::sync::{Arc, Mutex};
-use std::time;
 
 use arc_swap::ArcSwap;
 use chrono;
 use once_cell::sync::Lazy;
 
 pub use chrono::Utc;
-pub use std::time::Instant;
+pub use std::time::{Duration, Instant};
 
 use std::collections::{HashMap, VecDeque};
 use std::thread::ThreadId;
 
 pub struct MockTimeSingletonPerThread {
-    utc: VecDeque<chrono::DateTime<chrono::Utc>>,
-    durations: VecDeque<time::Duration>,
+    utc: VecDeque<chrono::DateTime<Utc>>,
+    durations: VecDeque<Duration>,
     utc_call_count: u64,
     instant_call_count: u64,
-    instant: time::Instant,
+    instant: Instant,
 }
 
 pub struct MockTimeSingleton {
@@ -30,7 +29,7 @@ impl MockTimeSingletonPerThread {
         self.durations.clear();
         self.utc_call_count = 0;
         self.instant_call_count = 0;
-        self.instant = time::Instant::now();
+        self.instant = Instant::now();
     }
 }
 
@@ -41,7 +40,7 @@ impl Default for MockTimeSingletonPerThread {
             durations: VecDeque::with_capacity(16),
             utc_call_count: 0,
             instant_call_count: 0,
-            instant: time::Instant::now(),
+            instant: Instant::now(),
         }
     }
 }
@@ -78,7 +77,7 @@ impl MockTimeSingleton {
         instance.utc.pop_front()
     }
 
-    pub fn pop_instant(&mut self) -> Option<time::Instant> {
+    pub fn pop_instant(&mut self) -> Option<Instant> {
         let instance = self.current_mut()?;
         instance.instant_call_count += 1;
         let x = instance.durations.pop_front();
@@ -107,7 +106,7 @@ impl MockTimeSingleton {
         self.current_mut().unwrap().reset();
     }
 
-    pub fn add_instant(&mut self, mock_instant: time::Duration) {
+    pub fn add_instant(&mut self, mock_instant: Duration) {
         self.current_mut().unwrap().durations.push_back(mock_instant);
     }
 
@@ -154,18 +153,18 @@ impl MockTime for Utc {
 }
 
 impl MockTime for Instant {
-    type Value = time::Instant;
+    type Value = Instant;
 
-    fn now_or_mock() -> time::Instant {
+    fn now_or_mock() -> Instant {
         let time_singleton = MockTimeSingleton::get();
         let x = time_singleton.lock().unwrap().pop_instant();
         match x {
             Some(t) => t,
-            None => time::Instant::now(),
+            None => Instant::now(),
         }
     }
 
-    fn system_time() -> time::Instant {
-        time::Instant::now()
+    fn system_time() -> Instant {
+        Instant::now()
     }
 }
