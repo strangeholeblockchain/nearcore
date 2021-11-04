@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use near_crypto::Signature;
 use near_primitives::block::{Approval, ApprovalInner};
 use near_primitives::hash::CryptoHash;
-use near_primitives::time::MockTime;
+use near_primitives::time::Clock;
 use near_primitives::types::{AccountId, ApprovalStake, Balance, BlockHeight, BlockHeightDelta};
 use near_primitives::validator_signer::ValidatorSigner;
 
@@ -297,8 +297,8 @@ impl Doomslug {
             tip: DoomslugTip { block_hash: CryptoHash::default(), height: 0 },
             endorsement_pending: false,
             timer: DoomslugTimer {
-                started: Instant::now_or_mock(),
-                last_endorsement_sent: Instant::now_or_mock(),
+                started: Clock::instant(),
+                last_endorsement_sent: Clock::instant(),
                 height: 0,
                 endorsement_delay,
                 min_delay,
@@ -597,12 +597,12 @@ impl Doomslug {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
 
     use near_crypto::{KeyType, SecretKey};
     use near_primitives::block::{Approval, ApprovalInner};
     use near_primitives::hash::hash;
-    use near_primitives::time::MockTime;
+    use near_primitives::time::Clock;
     use near_primitives::types::{AccountId, ApprovalStake};
     use near_primitives::validator_signer::InMemoryValidatorSigner;
 
@@ -627,7 +627,7 @@ mod tests {
             DoomslugThresholdMode::TwoThirds,
         );
 
-        let mut now = Instant::now_or_mock(); // For the test purposes the absolute value of the initial instant doesn't matter
+        let mut now = Clock::instant(); // For the test purposes the absolute value of the initial instant doesn't matter
 
         // Set a new tip, must produce an endorsement
         ds.set_tip(now, hash(&[1]), 1, 1);
@@ -783,7 +783,7 @@ mod tests {
             DoomslugThresholdMode::TwoThirds,
         );
 
-        let mut now = Instant::now_or_mock();
+        let mut now = Clock::instant();
 
         // In the comments below the format is
         // account, height -> approved stake
@@ -917,7 +917,7 @@ mod tests {
 
         // Process first approval, and then process it again and make sure it works
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a1_1,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
@@ -942,7 +942,7 @@ mod tests {
         );
 
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a1_1,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
@@ -968,13 +968,13 @@ mod tests {
 
         // Process the remaining two approvals on the first block
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a1_2,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
         );
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a1_3,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
@@ -1000,7 +1000,7 @@ mod tests {
 
         // Process new approvals one by one, expect the approved and endorsed stake to slowly decrease
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a2_1,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
@@ -1025,7 +1025,7 @@ mod tests {
         );
 
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a2_2,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
@@ -1051,7 +1051,7 @@ mod tests {
 
         // As we update the last of the three approvals, the tracker for the first block should be completely removed
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a2_3,
             &stakes,
             DoomslugThresholdMode::TwoThirds,
@@ -1081,7 +1081,7 @@ mod tests {
         );
 
         tracker.process_approval(
-            Instant::now_or_mock(),
+            Clock::instant(),
             &a2_3,
             &stakes,
             DoomslugThresholdMode::TwoThirds,

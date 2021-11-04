@@ -1,4 +1,4 @@
-use near_primitives::time::{Instant, MockTime};
+use near_primitives::time::{Clock, Instant};
 use std::collections::{hash_map::Entry, HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -582,7 +582,7 @@ impl RoutingTable {
                             if cur_nonce == nonce {
                                 self.peer_last_time_reachable.insert(
                                     peer_id.clone(),
-                                    Instant::now_or_mock() - SAVE_PEERS_MAX_TIME,
+                                    Clock::instant() - SAVE_PEERS_MAX_TIME,
                                 );
 
                                 update
@@ -598,7 +598,7 @@ impl RoutingTable {
                 warn!(target: "network", "Error removing network component from store. {:?}", e);
             }
         } else {
-            self.peer_last_time_reachable.insert(peer_id.clone(), Instant::now_or_mock());
+            self.peer_last_time_reachable.insert(peer_id.clone(), Clock::instant());
         }
     }
 
@@ -701,7 +701,7 @@ impl RoutingTable {
 
         if let Some(nonces) = self.waiting_pong.cache_get_mut(&pong.source) {
             res = nonces.cache_remove(&(pong.nonce as usize)).and_then(|sent| {
-                Some(Instant::now_or_mock().duration_since(sent).as_secs_f64() * 1000f64)
+                Some(Clock::instant().duration_since(sent).as_secs_f64() * 1000f64)
             });
         }
 
@@ -721,7 +721,7 @@ impl RoutingTable {
             self.waiting_pong.cache_get_mut(&target).unwrap()
         };
 
-        entry.cache_set(nonce, Instant::now_or_mock());
+        entry.cache_set(nonce, Clock::instant());
     }
 
     pub fn get_ping(&mut self, peer_id: PeerId) -> usize {
@@ -751,7 +751,7 @@ impl RoutingTable {
     }
 
     fn try_save_edges(&mut self, force_pruning: bool, timeout: Duration) -> Vec<Edge> {
-        let now = Instant::now_or_mock();
+        let now = Clock::instant();
         let mut oldest_time = now;
         let to_save = self
             .peer_last_time_reachable
@@ -825,7 +825,7 @@ impl RoutingTable {
 
         self.peer_forwarding = self.raw_graph.calculate_distance();
 
-        let now = Instant::now_or_mock();
+        let now = Clock::instant();
         for peer in self.peer_forwarding.keys() {
             self.peer_last_time_reachable.insert(peer.clone(), now);
         }

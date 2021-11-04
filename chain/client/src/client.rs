@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use cached::{Cached, SizedCache};
 use log::{debug, error, info, warn};
-use near_primitives::time::{MockTime, Utc};
+use near_primitives::time::Clock;
 
 use near_chain::chain::{
     ApplyStatePartsRequest, BlockCatchUpRequest, BlocksCatchUpState, StateSplitRequest,
@@ -181,19 +181,19 @@ impl Client {
             challenges: Default::default(),
             rs: ReedSolomonWrapper::new(data_parts, parity_parts),
             rebroadcasted_blocks: SizedCache::with_size(NUM_REBROADCAST_BLOCKS),
-            last_time_head_progress_made: Instant::now_or_mock(),
+            last_time_head_progress_made: Clock::instant(),
         })
     }
 
     // Checks if it's been at least `stall_timeout` since the last time the head was updated, or
     // this method was called. If yes, rebroadcasts the current head.
     pub fn check_head_progress_stalled(&mut self, stall_timeout: Duration) -> Result<(), Error> {
-        if Instant::now_or_mock() > self.last_time_head_progress_made + stall_timeout
+        if Clock::instant() > self.last_time_head_progress_made + stall_timeout
             && !self.sync_status.is_syncing()
         {
             let block = self.chain.get_block(&self.chain.head()?.last_block_hash)?;
             self.network_adapter.do_send(NetworkRequests::Block { block: block.clone() });
-            self.last_time_head_progress_made = Instant::now_or_mock();
+            self.last_time_head_progress_made = Clock::instant();
         }
         Ok(())
     }
@@ -503,7 +503,7 @@ impl Client {
         // Update latest known even before returning block out, to prevent race conditions.
         self.chain.mut_store().save_latest_known(LatestKnown {
             height: next_height,
-            seen: to_timestamp(Utc::now_or_mock()),
+            seen: to_timestamp(Clock::utc()),
         })?;
 
         near_metrics::inc_counter(&metrics::BLOCK_PRODUCED_TOTAL);
@@ -755,7 +755,7 @@ impl Client {
         }
 
         if let Ok(Some(_)) = result {
-            self.last_time_head_progress_made = Instant::now_or_mock();
+            self.last_time_head_progress_made = Clock::instant();
         }
 
         let protocol_version = self
@@ -922,7 +922,7 @@ impl Client {
             };
 
             self.doomslug.set_tip(
-                Instant::now_or_mock(),
+                Clock::instant(),
                 tip.last_block_hash,
                 tip.height,
                 last_final_height,
@@ -1367,11 +1367,7 @@ impl Client {
                 }
             };
 
-        self.doomslug.on_approval_message(
-            Instant::now_or_mock(),
-            &approval,
-            &block_producer_stakes,
-        );
+        self.doomslug.on_approval_message(Clock::instant(), &approval, &block_producer_stakes);
     }
 
     /// Forwards given transaction to upcoming validators.

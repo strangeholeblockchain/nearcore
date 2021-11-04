@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use borsh::de::BorshDeserialize;
-use near_primitives::time::MockTime;
+use near_primitives::time::Clock;
 
 use near_crypto::Signature;
 use near_network::routing::{
@@ -36,7 +36,7 @@ impl RoutingTableTest {
     fn new() -> Self {
         let me = random_peer_id();
         let store = create_test_store();
-        let now = Instant::now_or_mock();
+        let now = Clock::instant();
 
         Self {
             routing_table: RoutingTable::new(me.clone(), store.clone()),

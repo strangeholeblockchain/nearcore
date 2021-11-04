@@ -7,23 +7,24 @@ use once_cell::sync::Lazy;
 pub use chrono::Utc;
 pub use std::time::{Duration, Instant};
 
+use chrono::DateTime;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Deref;
 use std::thread::ThreadId;
 
-pub struct MockTimeSingletonPerThread {
-    utc: VecDeque<chrono::DateTime<Utc>>,
+pub struct MockClockPerThread {
+    utc: VecDeque<DateTime<Utc>>,
     durations: VecDeque<Duration>,
     utc_call_count: u64,
     instant_call_count: u64,
     instant: Instant,
 }
 
-pub struct MockTimeSingleton {
-    threads: HashMap<ThreadId, MockTimeSingletonPerThread>,
+pub struct Clock {
+    clocks_per_thread: HashMap<ThreadId, MockClockPerThread>,
 }
 
-impl MockTimeSingletonPerThread {
+impl MockClockPerThread {
     pub fn reset(&mut self) {
         self.utc.clear();
         self.durations.clear();
@@ -33,7 +34,7 @@ impl MockTimeSingletonPerThread {
     }
 }
 
-impl Default for MockTimeSingletonPerThread {
+impl Default for MockClockPerThread {
     fn default() -> Self {
         Self {
             utc: VecDeque::with_capacity(16),
@@ -45,31 +46,30 @@ impl Default for MockTimeSingletonPerThread {
     }
 }
 
-impl Default for MockTimeSingleton {
+impl Default for Clock {
     fn default() -> Self {
-        Self { threads: HashMap::default() }
+        Self { clocks_per_thread: HashMap::default() }
     }
 }
 
-static SINGLETON: Lazy<Arc<Mutex<MockTimeSingleton>>> =
-    Lazy::new(|| Arc::from(Mutex::new(MockTimeSingleton::new())));
+static SINGLETON: Lazy<Arc<Mutex<Clock>>> = Lazy::new(|| Arc::from(Mutex::new(Clock::new())));
 
-impl MockTimeSingleton {
+impl Clock {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn get() -> &'static Arc<Mutex<MockTimeSingleton>> {
+    pub fn get() -> &'static Arc<Mutex<Clock>> {
         SINGLETON.deref()
     }
     pub fn reset(&mut self) {
         self.current_mut().reset();
     }
-    pub fn add_utc(&mut self, mock_date: chrono::DateTime<chrono::Utc>) {
+    pub fn add_utc(&mut self, mock_date: DateTime<chrono::Utc>) {
         self.current_mut().utc.push_back(mock_date);
     }
 
-    pub fn pop_utc(&mut self) -> Option<chrono::DateTime<chrono::Utc>> {
+    pub fn pop_utc(&mut self) -> Option<DateTime<chrono::Utc>> {
         let instance = self.current_mut();
         instance.utc_call_count += 1;
         instance.utc.pop_front()
@@ -85,16 +85,16 @@ impl MockTimeSingleton {
         }
     }
 
-    pub fn current_mut(&mut self) -> &mut MockTimeSingletonPerThread {
+    pub fn current_mut(&mut self) -> &mut MockClockPerThread {
         let handle = std::thread::current();
         let id = handle.id();
-        self.threads.entry(id).or_default()
+        self.clocks_per_thread.entry(id).or_default()
     }
 
-    pub fn current(&self) -> Option<&MockTimeSingletonPerThread> {
+    pub fn current(&self) -> Option<&MockClockPerThread> {
         let handle = std::thread::current();
         let id = handle.id();
-        self.threads.get(&id)
+        self.clocks_per_thread.get(&id)
     }
 
     pub fn add_instant(&mut self, mock_instant: Duration) {
@@ -113,21 +113,9 @@ impl MockTimeSingleton {
     pub fn count_instant(&self) -> usize {
         self.current().unwrap().durations.len()
     }
-}
 
-pub trait MockTime {
-    type Value;
-
-    fn now_or_mock() -> Self::Value;
-
-    fn system_time() -> Self::Value;
-}
-
-impl MockTime for Utc {
-    type Value = chrono::DateTime<chrono::Utc>;
-
-    fn now_or_mock() -> chrono::DateTime<chrono::Utc> {
-        let time_singleton = MockTimeSingleton::get();
+    pub fn utc() -> DateTime<chrono::Utc> {
+        let time_singleton = Clock::get();
         let x = time_singleton.lock().unwrap().pop_utc();
         match x {
             Some(t) => t,
@@ -135,24 +123,12 @@ impl MockTime for Utc {
         }
     }
 
-    fn system_time() -> chrono::DateTime<chrono::Utc> {
-        chrono::Utc::now()
-    }
-}
-
-impl MockTime for Instant {
-    type Value = Instant;
-
-    fn now_or_mock() -> Instant {
-        let time_singleton = MockTimeSingleton::get();
+    pub fn instant() -> Instant {
+        let time_singleton = Clock::get();
         let x = time_singleton.lock().unwrap().pop_instant();
         match x {
             Some(t) => t,
             None => Instant::now(),
         }
-    }
-
-    fn system_time() -> Instant {
-        Instant::now()
     }
 }

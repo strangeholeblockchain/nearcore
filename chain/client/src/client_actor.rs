@@ -12,7 +12,7 @@ use borsh::BorshSerialize;
 use chrono::DateTime;
 use chrono::Duration as OldDuration;
 use log::{debug, error, info, trace, warn};
-use near_primitives::time::{MockTime, Utc};
+use near_primitives::time::{Clock, Utc};
 
 #[cfg(feature = "delay_detector")]
 use delay_detector::DelayDetector;
@@ -109,7 +109,7 @@ pub struct ClientActor {
 fn wait_until_genesis(genesis_time: &DateTime<Utc>) {
     loop {
         // Get chrono::Duration::num_seconds() by deducting genesis_time from now.
-        let duration = genesis_time.signed_duration_since(Utc::now_or_mock());
+        let duration = genesis_time.signed_duration_since(Clock::utc());
         let chrono_seconds = duration.num_seconds();
         // Check if number of seconds in chrono::Duration larger than zero.
         if chrono_seconds <= 0 {
@@ -736,7 +736,7 @@ impl ClientActor {
             Some(signer) => signer,
         };
 
-        let now = Instant::now_or_mock();
+        let now = Clock::instant();
         // Check that we haven't announced it too recently
         if let Some(last_validator_announce_time) = self.last_validator_announce_time {
             // Don't make announcement if have passed less than half of the time in which other peers
@@ -805,7 +805,7 @@ impl ClientActor {
                     || num_chunks == self.client.runtime_adapter.num_shards(&epoch_id).unwrap();
 
                 if self.client.doomslug.ready_to_produce_block(
-                    Instant::now_or_mock(),
+                    Clock::instant(),
                     height,
                     have_all_chunks,
                 ) {
@@ -905,7 +905,7 @@ impl ClientActor {
     fn try_doomslug_timer(&mut self, _: &mut Context<ClientActor>) {
         let _ = self.client.check_and_update_doomslug_tip();
 
-        let approvals = self.client.doomslug.process_timer(Instant::now_or_mock());
+        let approvals = self.client.doomslug.process_timer(Clock::instant());
 
         // Important to save the largest approval target height before sending approvals, so
         // that if the node crashes in the meantime, we cannot get slashed on recovery

@@ -4,7 +4,7 @@ use near_chain::test_utils::setup;
 use near_chain::{Block, ChainStoreAccess, ErrorKind, Provenance};
 use near_logger_utils::init_test_logger;
 use near_primitives::hash::CryptoHash;
-use near_primitives::time::MockTimeSingleton;
+use near_primitives::time::Clock;
 use near_primitives::version::PROTOCOL_VERSION;
 use num_rational::Rational;
 use std::str::FromStr;
@@ -12,7 +12,7 @@ use std::str::FromStr;
 #[test]
 fn empty_chain() {
     init_test_logger();
-    let mock_time = MockTimeSingleton::get();
+    let mock_time = Clock::get();
     mock_time.lock().unwrap().reset();
     let now = chrono::Utc.ymd(2020, 10, 1).and_hms_milli(0, 0, 1, 444);
     mock_time.lock().unwrap().add_utc(now);
@@ -33,7 +33,7 @@ fn empty_chain() {
 #[test]
 fn build_chain() {
     init_test_logger();
-    let mock_time = MockTimeSingleton::get();
+    let mock_time = Clock::get();
     mock_time.lock().unwrap().reset();
     for i in 0..5 {
         mock_time.lock().unwrap().add_utc(chrono::Utc.ymd(2020, 10, 1).and_hms_milli(

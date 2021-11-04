@@ -26,7 +26,7 @@ use validate::StoreValidatorError;
 
 use crate::RuntimeAdapter;
 use near_primitives::shard_layout::get_block_shard_uid_rev;
-use near_primitives::time::MockTime;
+use near_primitives::time::Clock;
 
 mod validate;
 
@@ -99,7 +99,7 @@ impl StoreValidator {
             store: store.clone(),
             inner: StoreValidatorCache::new(),
             timeout: None,
-            start_time: Instant::now_or_mock(),
+            start_time: Clock::instant(),
             errors: vec![],
             tests: 0,
         }
@@ -346,7 +346,7 @@ impl StoreValidator {
         Ok(())
     }
     pub fn validate(&mut self) {
-        self.start_time = Instant::now_or_mock();
+        self.start_time = Clock::instant();
 
         // Init checks
         // Check Head-Tail validity and fill cache with their values

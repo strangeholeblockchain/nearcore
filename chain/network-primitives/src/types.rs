@@ -10,7 +10,7 @@ use actix::dev::{MessageResponse, ResponseChannel};
 use actix::{Actor, Message};
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::DateTime;
-use near_primitives::time::{MockTime, Utc};
+use near_primitives::time::{Clock, Utc};
 use serde::{Deserialize, Serialize};
 use strum::AsStaticStr;
 use tokio::net::TcpStream;
@@ -664,8 +664,8 @@ impl KnownPeerState {
         KnownPeerState {
             peer_info,
             status: KnownPeerStatus::Unknown,
-            first_seen: to_timestamp(Utc::now_or_mock()),
-            last_seen: to_timestamp(Utc::now_or_mock()),
+            first_seen: to_timestamp(Clock::utc()),
+            last_seen: to_timestamp(Clock::utc()),
         }
     }
 
