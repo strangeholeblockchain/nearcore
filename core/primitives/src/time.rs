@@ -1,7 +1,6 @@
 use std::default::Default;
 use std::sync::{Arc, Mutex};
 
-use arc_swap::ArcSwap;
 use chrono;
 use once_cell::sync::Lazy;
 
@@ -9,6 +8,7 @@ pub use chrono::Utc;
 pub use std::time::{Duration, Instant};
 
 use std::collections::{HashMap, VecDeque};
+use std::ops::Deref;
 use std::thread::ThreadId;
 
 pub struct MockTimeSingletonPerThread {
@@ -51,22 +51,20 @@ impl Default for MockTimeSingleton {
     }
 }
 
-static SINGLETON: Lazy<ArcSwap<Mutex<MockTimeSingleton>>> =
-    Lazy::new(|| ArcSwap::from_pointee(Mutex::new(MockTimeSingleton::new())));
+static SINGLETON: Lazy<Arc<Mutex<MockTimeSingleton>>> =
+    Lazy::new(|| Arc::from(Mutex::new(MockTimeSingleton::new())));
 
 impl MockTimeSingleton {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn get() -> Arc<Mutex<MockTimeSingleton>> {
-        SINGLETON.load_full()
+    pub fn get() -> &'static Arc<Mutex<MockTimeSingleton>> {
+        SINGLETON.deref()
     }
-
-    pub fn set(value: MockTimeSingleton) {
-        SINGLETON.store(Arc::new(Mutex::new(value)))
+    pub fn reset(&mut self) {
+        self.current_mut().unwrap().reset();
     }
-
     pub fn add_utc(&mut self, mock_date: chrono::DateTime<chrono::Utc>) {
         self.current_mut().unwrap().utc.push_back(mock_date);
     }
@@ -100,10 +98,6 @@ impl MockTimeSingleton {
         let handle = std::thread::current();
         let id = handle.id();
         self.threads.get(&id)
-    }
-
-    pub fn reset(&mut self) {
-        self.current_mut().unwrap().reset();
     }
 
     pub fn add_instant(&mut self, mock_instant: Duration) {

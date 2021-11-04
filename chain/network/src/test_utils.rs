@@ -94,7 +94,7 @@ pub fn wait_or_panic(max_wait_ms: u64) {
 /// use std::time::{Instant, Duration};
 ///
 /// near_actix_test_utils::run_actix(async {
-///     let start = Instant::now_or_mock();
+///     let start = Instant::now();
 ///     WaitOrTimeout::new(
 ///         Box::new(move |ctx| {
 ///             if start.elapsed() > Duration::from_millis(10) {
