@@ -63,20 +63,20 @@ impl MockTimeSingleton {
         SINGLETON.deref()
     }
     pub fn reset(&mut self) {
-        self.current_mut().unwrap().reset();
+        self.current_mut().reset();
     }
     pub fn add_utc(&mut self, mock_date: chrono::DateTime<chrono::Utc>) {
-        self.current_mut().unwrap().utc.push_back(mock_date);
+        self.current_mut().utc.push_back(mock_date);
     }
 
     pub fn pop_utc(&mut self) -> Option<chrono::DateTime<chrono::Utc>> {
-        let instance = self.current_mut().unwrap();
+        let instance = self.current_mut();
         instance.utc_call_count += 1;
         instance.utc.pop_front()
     }
 
     pub fn pop_instant(&mut self) -> Option<Instant> {
-        let instance = self.current_mut()?;
+        let instance = self.current_mut();
         instance.instant_call_count += 1;
         let x = instance.durations.pop_front();
         match x {
@@ -85,13 +85,10 @@ impl MockTimeSingleton {
         }
     }
 
-    pub fn current_mut(&mut self) -> Option<&mut MockTimeSingletonPerThread> {
+    pub fn current_mut(&mut self) -> &mut MockTimeSingletonPerThread {
         let handle = std::thread::current();
         let id = handle.id();
-        if !self.threads.contains_key(&id) {
-            self.threads.insert(id, MockTimeSingletonPerThread::default());
-        }
-        self.threads.get_mut(&id)
+        self.threads.entry(id).or_default()
     }
 
     pub fn current(&self) -> Option<&MockTimeSingletonPerThread> {
@@ -101,18 +98,15 @@ impl MockTimeSingleton {
     }
 
     pub fn add_instant(&mut self, mock_instant: Duration) {
-        self.current_mut().unwrap().durations.push_back(mock_instant);
+        self.current_mut().durations.push_back(mock_instant);
     }
 
-    pub fn get_instant_call_count(&mut self) -> u64 {
+    pub fn instant_call_count(&mut self) -> u64 {
         let instance = self.current_mut();
-        match instance {
-            Some(t) => t.instant_call_count,
-            None => 0,
-        }
+        instance.instant_call_count
     }
 
-    pub fn get_utc_call_count(&self) -> u64 {
+    pub fn utc_call_count(&self) -> u64 {
         self.current().unwrap().utc_call_count
     }
 

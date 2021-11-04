@@ -18,8 +18,8 @@ fn empty_chain() {
     mock_time.lock().unwrap().add_utc(now);
 
     let (chain, _, _) = setup();
-    let count_instant = { mock_time.lock().unwrap().get_instant_call_count() };
-    let count_utc = { mock_time.lock().unwrap().get_utc_call_count() };
+    let count_instant = { mock_time.lock().unwrap().instant_call_count() };
+    let count_utc = { mock_time.lock().unwrap().utc_call_count() };
 
     assert_eq!(chain.head().unwrap().height, 0);
     assert_eq!(
@@ -62,8 +62,8 @@ fn build_chain() {
         assert_eq!(tip.unwrap().height, i + 1);
     }
     assert_eq!(chain.head().unwrap().height, 4);
-    let count_instant = { mock_time.lock().unwrap().get_instant_call_count() };
-    let count_utc = { mock_time.lock().unwrap().get_utc_call_count() };
+    let count_instant = { mock_time.lock().unwrap().instant_call_count() };
+    let count_utc = { mock_time.lock().unwrap().utc_call_count() };
     assert_eq!(count_utc, 5);
     assert_eq!(count_instant, 0);
     assert_eq!(
