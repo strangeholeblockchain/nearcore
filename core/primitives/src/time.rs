@@ -18,6 +18,7 @@ pub struct MockClockPerThread {
     utc_call_count: u64,
     instant_call_count: u64,
     instant: Instant,
+    is_mock: bool,
 }
 
 pub struct Clock {
@@ -31,6 +32,7 @@ impl MockClockPerThread {
         self.utc_call_count = 0;
         self.instant_call_count = 0;
         self.instant = Instant::now();
+        self.is_mock = false;
     }
 }
 
@@ -42,6 +44,7 @@ impl Default for MockClockPerThread {
             utc_call_count: 0,
             instant_call_count: 0,
             instant: Instant::now(),
+            is_mock: false,
         }
     }
 }
@@ -66,7 +69,9 @@ impl Clock {
         self.current_mut().reset();
     }
     pub fn add_utc(&mut self, mock_date: DateTime<chrono::Utc>) {
-        self.current_mut().utc.push_back(mock_date);
+        let instance = self.current_mut();
+        instance.utc.push_back(mock_date);
+        instance.is_mock = true;
     }
 
     pub fn pop_utc(&mut self) -> Option<DateTime<chrono::Utc>> {
@@ -98,7 +103,9 @@ impl Clock {
     }
 
     pub fn add_instant(&mut self, mock_instant: Duration) {
-        self.current_mut().durations.push_back(mock_instant);
+        let instance = self.current_mut();
+        instance.durations.push_back(mock_instant);
+        instance.is_mock = true;
     }
 
     pub fn instant_call_count(&mut self) -> u64 {
@@ -114,21 +121,36 @@ impl Clock {
         self.current().unwrap().durations.len()
     }
 
+    pub fn is_mock(&self) -> bool {
+        self.current().unwrap().is_mock
+    }
     pub fn utc() -> DateTime<chrono::Utc> {
         let time_singleton = Clock::get();
-        let x = time_singleton.lock().unwrap().pop_utc();
+        let mut current =  time_singleton.lock().unwrap();
+        let x = current.pop_utc();
         match x {
             Some(t) => t,
-            None => chrono::Utc::now(),
+            None => {
+                if current.is_mock() {
+                    panic!("Mock clock run out of samples");
+                }
+                chrono::Utc::now()
+            }
         }
     }
 
     pub fn instant() -> Instant {
         let time_singleton = Clock::get();
-        let x = time_singleton.lock().unwrap().pop_instant();
+        let mut current = time_singleton.lock().unwrap();
+        let x = current.pop_instant();
         match x {
             Some(t) => t,
-            None => Instant::now(),
+            None => {
+                if current.is_mock() {
+                    panic!("Mock clock run out of samples");
+                }
+                Instant::now()
+            }
         }
     }
 }
