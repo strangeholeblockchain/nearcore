@@ -22,10 +22,11 @@ fn empty_chain() {
     let count_utc = { mock_time.lock().unwrap().utc_call_count() };
 
     assert_eq!(chain.head().unwrap().height, 0);
-    assert_eq!(
-        chain.head().unwrap().last_block_hash,
-        CryptoHash::from_str("ED2pukQzADa3rPKzmSkVV4vA3J6DLASBsU9WRbesKywZ").unwrap()
-    );
+    let hash = chain.head().unwrap().last_block_hash;
+    #[cfg(feature = "protocol_feature_block_header_v3")]
+    assert_eq!(hash, CryptoHash::from_str("ED2pukQzADa3rPKzmSkVV4vA3J6DLASBsU9WRbesKywZ").unwrap());
+    #[cfg(not(feature = "protocol_feature_block_header_v3"))]
+    assert_eq!(hash, CryptoHash::from_str("4Fgb9xxzLcWuY7atxSB9yXxF4BKzTHvXMHrAkk88mEUp").unwrap());
     assert_eq!(count_utc, 1);
     assert_eq!(count_instant, 0);
 }
@@ -47,9 +48,15 @@ fn build_chain() {
     let (mut chain, _, signer) = setup();
 
     let prev_hash = *chain.head_header().unwrap().hash();
+    #[cfg(feature = "protocol_feature_block_header_v3")]
     assert_eq!(
         prev_hash,
         CryptoHash::from_str("Ax1E4j9Yq7AVECEtXrhjEvnMe6XGG1FXYg8jhAZrZrmK").unwrap()
+    );
+    #[cfg(not(feature = "protocol_feature_block_header_v3"))]
+    assert_eq!(
+        prev_hash,
+        CryptoHash::from_str("GZyFPBDNEaowcZRPGm3biD9Yh9rdWuYdR8cRjZBAZwVp").unwrap()
     );
 
     for i in 0..4 {
@@ -66,9 +73,15 @@ fn build_chain() {
     let count_utc = { mock_time.lock().unwrap().utc_call_count() };
     assert_eq!(count_utc, 5);
     assert_eq!(count_instant, 0);
+    #[cfg(feature = "protocol_feature_block_header_v3")]
     assert_eq!(
         chain.head().unwrap().last_block_hash,
         CryptoHash::from_str("8qbYy7tVXGVFBaqoxbVbeQFBJpQBs9iPRCqHdsz6c3Ws").unwrap()
+    );
+    #[cfg(not(feature = "protocol_feature_block_header_v3"))]
+    assert_eq!(
+        chain.head().unwrap().last_block_hash,
+        CryptoHash::from_str("2V3sj9CRWkv1n2q8ByuQdrbMSuVKkcBwsYMJupG6XcDG").unwrap()
     );
 }
 
